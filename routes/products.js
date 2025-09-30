@@ -1,4 +1,5 @@
 const express = require('express');
+const { isAuthorized } = require('./middlewares');
 
 const productRouter = express.Router();
 
