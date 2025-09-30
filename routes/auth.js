@@ -1,58 +1,59 @@
 const express = require('express');
-const crypto = require('crypto');
-const { log } = require('console');
-
-
 const authRouter = express.Router();
-let USER = [
-    { username: "efrat", password: "123456" }
-];
+const {genertateToken} = require('../utils/general');
+const { addToken, removeToken, isTokenActive } = require('../services/tokens');
+const { isAuthorized } = require('./middlewares');
+const { registerUser, verifyUser } = require('../services/authService');
 
-const activeTokens = [];
+
+
+
+
+authRouter.post('/register', (req, res) => {
+    const { username, password } = req.body;
+
+    const result = registerUser(username, password);
+
+    if (result.error) {
+        return res.status(result.status).json({ msg: result.error });
+    }
+    const token=genertateToken();
+    addToken(token);
+    res.status(201).json({ msg: result.message ,token});
+});
 
 authRouter.post('/login', (req, res) => {
     const { username, password } = req.body;
+    const result = verifyUser(username, password);
 
-    const user = USER.find(u => u.username === username);
-
-    if (!user) {
-
-        return res.status(404).json({ messege: 'Unauthorized' });
+    if (result.error) {
+        return res.status(result.status).json({ msg: result.error });
     }
-    if (user.password !== password) {
-        return res.status(401).json({ messege: 'Incorrect password' });
-    }
-
-    const token = crypto.randomBytes(32).toString('hex');
-
-    activeTokens.push(token);
-    console.log(activeTokens);
-    
-
+    const token = genertateToken();
+    addToken(token);
     res.json({ token });
 });
 
-authRouter.post("/logout", (req, res) => {
-  const authHeader = req.headers["authorization"];
-  if (!authHeader) {
-    return res.status(401).json({ message: " Authorization header missing" });
-  }
+authRouter.post('/logout',isAuthorized, (req, res) => {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader) {
+        
+        return res.status(401).json({ message: " Authorization header missing" });
+    }
 
-  const parts = authHeader.split(" ");
-  if (parts[0] !== "Bearer" || !parts[1]) {
-    return res.status(401).json({ message: "wrong Authorization" });
-  }
+    const parts = authHeader.split(" ");
+    if (parts[0] !== "Bearer" || !parts[1]) {
+        return res.status(401).json({ message: "wrong Authorization" });
+    }
 
-  const token = parts[1];
+    const token = parts[1];
 
-  const index = activeTokens.indexOf(token);
-  if (index === -1) {
-    return res.status(403).json({ message: "token not found" });
-  }
+    if (!isTokenActive(token)) {
+        return res.status(403).json({ message: "Token not found or already expired" });
+    }
 
-  activeTokens.splice(index, 1);
-
-  res.json({ message: "succses" });
+    removeToken(token);
+    res.json({ message: "Logout successful" });
 });
 
 module.exports = authRouter;
