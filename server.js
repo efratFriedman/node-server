@@ -1,18 +1,20 @@
 const express = require('express');
+const cors = require('cors');
 const productsRouter = require('./routes/products');
 const authRouter = require('./routes/auth');
-const route = require('./routes/route')
+const route = require('./routes/route');
+const { isAuthorized } = require('./routes/middlewares');
 
 const app = express();
-app.use(express.json());
-const cors = require('cors');
+
 app.use(cors({
-  origin: 'http://localhost:5173'
+  origin: 'http://localhost:5173',
+  credentials:true,
 }));
+app.use(express.json());
 
 
-
-app.use('/api/products', productsRouter);
+app.use('/api/products',isAuthorized, productsRouter);
 app.use('/api/auth', authRouter);
 app.use(route);
 
