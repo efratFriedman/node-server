@@ -11,4 +11,3 @@ const removeToken=(token)=>{
 }
 
 module.exports={isTokenActive,addToken,removeToken};
-
